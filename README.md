@@ -1,11 +1,18 @@
-
 - **Crear la instancia**: Ve a AWS Lightsail y crea una nueva instancia. Selecciona la pila de LAMP (Apache, MySQL/MariaDB, PHP) proporcionada por Bitnami.
 - **Conectar a la instancia**: Una vez creada, usa SSH para conectarte a tu instancia. AWS Lightsail proporciona un botón de conexión rápida mediante su propia interfaz web, o puedes usar tu propio cliente SSH con las claves privadas descargadas.
+
 
 * Ver la contraseña del usuario sudo del servidor
 ```bash
 cat bitnami_credentials
 ```
+
+* Instalar git si es necesario
+
+```bash
+sudo apt install git
+```
+
 
 - **Configuración de la base de datos**: Bitnami LAMP viene con MariaDB instalada. Necesitarás crear una base de datos y un usuario para tu aplicación. Puedes hacer esto usando phpMyAdmin (incluido en Bitnami LAMP) o la línea de comandos. Aquí está el comando para crear una base de datos y un usuario:
 
@@ -73,3 +80,8 @@ sudo /opt/bitnami/ctlscript.sh restart mariadb
 ``` 
  rm /opt/bitnami/apache/htdocs/index.html
 ``` 
+
+
+
+### Configurar HTTPS
+*  https://docs.aws.amazon.com/lightsail/latest/userguide/amazon-lightsail-using-lets-encrypt-certificates-with-lamp.html#configure-http-to-https-redirection-lamp
