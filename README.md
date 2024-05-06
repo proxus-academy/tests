@@ -80,7 +80,7 @@ sudo /opt/bitnami/ctlscript.sh restart mariadb
 ```bash
 cd tests
 git pull
-```bash
+```
 3. descomprimir el zip
 ```bash
 unzip tests_proxus.zip
