@@ -91,7 +91,7 @@ unzip tests_proxus.zip
 rm -rf /opt/bitnami/apache2/htdocs
  cp -r tests/tests_proxus/* /opt/bitnami/apache2/htdocs/
 ```
-5. kahdf
+5. Borrar y volver a crear la base de datos
 ```bash
 /opt/bitnami/mariadb/bin/mariadb -u root -p
 drop DATABASE flexam;
