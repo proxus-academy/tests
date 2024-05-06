@@ -74,6 +74,36 @@ sudo /opt/bitnami/ctlscript.sh restart mariadb
 ``` 
 
 
+## Actualiza la ultima versión
+1. Subir el zip a github
+2. Actualizar el repositorio en el servidor
+```bash
+cd tests
+git pull
+```bash
+3. descomprimir el zip
+```
+unzip tests_proxus.zip
+```bash
+4. Borrar archivos antiguos y cargar los nuevos
+```
+ cd
+rm -rf /opt/bitnami/apache2/htdocs
+ cp -r tests/tests_proxus/* /opt/bitnami/apache2/htdocs/
+```
+5. kahdf
+```bash
+/opt/bitnami/mariadb/bin/mariadb -u root -p
+drop DATABASE flexam;
+CREATE DATABASE flexam;
+CREATE USER 'flexam'@'localhost' IDENTIFIED BY 'Flexam24';
+GRANT ALL PRIVILEGES ON flexam.* TO 'flexam'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+```
 
-### Configurar HTTPS
-*  https://docs.aws.amazon.com/lightsail/latest/userguide/amazon-lightsail-using-lets-encrypt-certificates-with-lamp.html#configure-http-to-https-redirection-lamp
+6. Configurar la base de datos con la info inicial
+
+```bash
+/opt/bitnami/mariadb/bin/mariadb -u root -p flexam < tests/tests_proxus/includes/BBDD/test_prueba_fal.sql
+```
