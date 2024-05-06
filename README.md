@@ -82,11 +82,11 @@ cd tests
 git pull
 ```bash
 3. descomprimir el zip
-```
-unzip tests_proxus.zip
 ```bash
-4. Borrar archivos antiguos y cargar los nuevos
+unzip tests_proxus.zip
 ```
+4. Borrar archivos antiguos y cargar los nuevos
+```bash
  cd
 rm -rf /opt/bitnami/apache2/htdocs
  cp -r tests/tests_proxus/* /opt/bitnami/apache2/htdocs/
