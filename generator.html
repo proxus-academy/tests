@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcard Creator</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121212;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #ffffff;
+        }
+        .container {
+            background-color: #1E1E1E;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            width: 80%;
+            max-width: 800px;
+            text-align: center;
+        }
+        h1 {
+            color: #BB86FC;
+            margin-bottom: 20px;
+        }
+        .flashcard {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .flashcard input {
+            width: 40%;
+            padding: 10px;
+            border: 1px solid #BB86FC;
+            border-radius: 5px;
+            background-color: #2C2C2C;
+            color: #ffffff;
+        }
+        .flashcard button {
+            background-color: #BB86FC;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .flashcard button:hover {
+            background-color: #9A67EA;
+        }
+        .actions button, .actions label {
+            background-color: #BB86FC;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            display: inline-block;
+        }
+        .actions button:hover, .actions label:hover {
+            background-color: #9A67EA;
+        }
+        .actions input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Flashcard Creator</h1>
+        <div id="flashcards-container">
+            <div class="flashcard">
+                <input type="text" placeholder="Front" class="front">
+                <input type="text" placeholder="Back" class="back">
+                <button onclick="removeFlashcard(this)">Delete</button>
+            </div>
+        </div>
+        <div class="actions">
+            <button onclick="addFlashcard()">Add Flashcard</button>
+            <button onclick="generatePDF()">Generate PDF</button>
+            <label for="csvFileInput">Upload CSV</label>
+            <input type="file" id="csvFileInput" accept=".csv" onchange="handleFiles(this.files)">
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
+    <script>
+        function addFlashcard(front = '', back = '') {
+            const container = document.getElementById('flashcards-container');
+            const flashcard = document.createElement('div');
+            flashcard.className = 'flashcard';
+            flashcard.innerHTML = `<input type="text" placeholder="Front" class="front" value="${front}"><input type="text" placeholder="Back" class="back" value="${back}"><button onclick="removeFlashcard(this)">Delete</button>`;
+            container.appendChild(flashcard);
+        }
+
+        function removeFlashcard(button) {
+            const flashcard = button.parentElement;
+            flashcard.remove();
+        }
+
+        function handleFiles(files) {
+            if (window.FileReader) {
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    const csv = event.target.result;
+                    parseCSV(csv);
+                };
+                reader.readAsText(files[0]);
+            } else {
+                alert('FileReader API not supported by your browser.');
+            }
+        }
+
+        function parseCSV(csv) {
+            const lines = csv.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                const [front, back] = lines[i].split(',');
+                if (front && back) {
+                    addFlashcard(front.trim(), back.trim());
+                }
+            }
+        }
+
+        async function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const fronts = [];
+            const backs = [];
+
+            document.querySelectorAll('.flashcard').forEach(flashcard => {
+                const front = flashcard.querySelector('.front').value;
+                const back = flashcard.querySelector('.back').value;
+                if (front && back) {
+                    fronts.push(front);
+                    backs.push(back);
+                }
+            });
+
+            const itemsPerPage = 8;
+            const pageWidth = 210;
+            const pageHeight = 297;
+            const margin = 10;
+            const cardWidth = (pageWidth - 3 * margin) / 2;
+            const cardHeight = (pageHeight - 5 * margin) / 4;
+
+            // Adding fronts and intercalated backs
+            for (let i = 0; i < fronts.length; i += itemsPerPage) {
+                if (i > 0) doc.addPage();
+                doc.setFontSize(12);
+                // Add fronts
+                for (let j = 0; j < itemsPerPage; j++) {
+                    const frontText = fronts[i + j];
+                    if (frontText) {
+                        const x = margin + (j % 2) * (cardWidth + margin);
+                        const y = margin + Math.floor(j / 2) * (cardHeight + margin);
+                        doc.text(frontText, x + cardWidth / 2, y + cardHeight / 2, { align: 'center' });
+                    }
+                }
+
+                doc.addPage();
+
+                // Add backs
+                for (let j = 0; j < itemsPerPage; j++) {
+                    const backText = backs[i + j];
+                    if (backText) {
+                        const x = margin + ((j % 2 === 0) ? (cardWidth + margin) : 0);
+                        const y = margin + Math.floor(j / 2) * (cardHeight + margin);
+                        doc.text(backText, x + cardWidth / 2, y + cardHeight / 2, { align: 'center' });
+                        doc.setFontSize(8);
+                        doc.text('hecho con proxustools.com/flashcards', x + cardWidth - margin, y + cardHeight - 5, { align: 'right' });
+                    }
+                }
+            }
+
+            doc.save('flashcards.pdf');
+        }
+    </script>
+</body>
+</html>
+
