@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creador de Tarjetas de Estudio</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121212;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #ffffff;
+        }
+        .container {
+            background-color: #1E1E1E;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            width: 80%;
+            max-width: 800px;
+            text-align: center;
+        }
+        h1 {
+            color: #BB86FC;
+            margin-bottom: 20px;
+        }
+        .flashcard {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .flashcard input {
+            width: 40%;
+            padding: 10px;
+            border: 1px solid #BB86FC;
+            border-radius: 5px;
+            background-color: #2C2C2C;
+            color: #ffffff;
+        }
+        .flashcard button {
+            background-color: #BB86FC;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .flashcard button:hover {
+            background-color: #9A67EA;
+        }
+        .actions button, .actions label {
+            background-color: #BB86FC;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            display: inline-block;
+        }
+        .actions button:hover, .actions label:hover {
+            background-color: #9A67EA;
+        }
+        .actions input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Creador de Tarjetas de Estudio</h1>
+        <div id="flashcards-container">
+            <div class="flashcard">
+                <input type="text" placeholder="Frente" class="front">
+                <input type="text" placeholder="Reverso" class="back">
+                <button onclick="removeFlashcard(this)">Eliminar</button>
+            </div>
+        </div>
+        <div class="actions">
+            <button onclick="addFlashcard()">Agregar Tarjeta de Estudio</button>
+            <button onclick="generatePDF()">Generar PDF</button>
+            <label for="csvFileInput">Subir CSV</label>
+            <input type="file" id="csvFileInput" accept=".csv" onchange="handleFiles(this.files)">
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
+    <script>
+        function addFlashcard(front = '', back = '') {
+            const container = document.getElementById('flashcards-container');
+            const flashcard = document.createElement('div');
+            flashcard.className = 'flashcard';
+            flashcard.innerHTML = `<input type="text" placeholder="Frente" class="front" value="${front}"><input type="text" placeholder="Reverso" class="back" value="${back}"><button onclick="removeFlashcard(this)">Eliminar</button>`;
+            container.appendChild(flashcard);
+        }
+
+        function removeFlashcard(button) {
+            const flashcard = button.parentElement;
+            flashcard.remove();
+        }
+
+        function handleFiles(files) {
+            if (window.FileReader) {
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    const csv = event.target.result;
+                    parseCSV(csv);
+                };
+                reader.readAsText(files[0]);
+            } else {
+                alert('La API FileReader no es compatible con tu navegador.');
+            }
+        }
+
+        function parseCSV(csv) {
+            const lines = csv.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                const [front, back] = lines[i].split(';');
+                if (front && back) {
+                    addFlashcard(front.trim(), back.trim());
+                }
+            }
+        }
+
+        async function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const fronts = [];
+            const backs = [];
+
+            document.querySelectorAll('.flashcard').forEach(flashcard => {
+                const front = flashcard.querySelector('.front').value;
+                const back = flashcard.querySelector('.back').value;
+                if (front && back) {
+                    fronts.push(front);
+                    backs.push(back);
+                }
+            });
+
+            const itemsPerPage = 8;
+            const pageWidth = 210;
+            const pageHeight = 297;
+            const margin = 10;
+            const cardWidth = (pageWidth - 3 * margin) / 2;
+            const cardHeight = (pageHeight - 5 * margin) / 4;
+
+            function splitTextToFit(text, maxWidth) {
+                const words = text.split(' ');
+                let lines = [];
+                let currentLine = words[0];
+
+                for (let i = 1; i < words.length; i++) {
+                    const word = words[i];
+                    const width = doc.getTextWidth(currentLine + ' ' + word);
+                    if (width < maxWidth) {
+                        currentLine += ' ' + word;
+                    } else {
+                        lines.push(currentLine);
+                        currentLine = word;
+                    }
+                }
+                lines.push(currentLine);
+                return lines;
+            }
+
+            for (let i = 0; i < fronts.length; i += itemsPerPage) {
+                if (i > 0) doc.addPage();
+                doc.setFontSize(12);
+
+                for (let j = 0; j < itemsPerPage; j++) {
+                    const frontText = fronts[i + j];
+                    if (frontText) {
+                        const x = margin + (j % 2) * (cardWidth + margin);
+                        const y = margin + Math.floor(j / 2) * (cardHeight + margin);
+                        const lines = splitTextToFit(frontText, cardWidth);
+                        lines.forEach((line, index) => {
+                            doc.text(line, x + cardWidth / 2, y + 10 + (index * 5), { align: 'center' });
+                        });
+                    }
+                }
+
+                doc.addPage();
+
+                for (let j = 0; j < itemsPerPage; j++) {
+                    const backText = backs[i + j];
+                    if (backText) {
+                        const x = margin + ((j % 2 === 0) ? (cardWidth + margin) : 0);
+                        const y = margin + Math.floor(j / 2) * (cardHeight + margin);
+                        const lines = splitTextToFit(backText, cardWidth);
+                        lines.forEach((line, index) => {
+                            doc.text(line, x + cardWidth / 2, y + 10 + (index * 5), { align: 'center' });
+                        });
+                        doc.setFontSize(8);
+                        doc.text('proxustools.com/flashcards', x + cardWidth - margin, y + cardHeight - 5, { align: 'right' });
+                    }
+                }
+            }
+
+            doc.save('tarjetas_estudio.pdf');
+        }
+    </script>
+</body>
+</html>
+
