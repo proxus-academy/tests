@@ -7,6 +7,7 @@
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
+            color: black;
         }
         .container {
             max-width: 1000px;
@@ -31,6 +32,7 @@
         tr.details td {
             background-color: #f9f9f9;
             display: none;
+            color: #333; /* Cambia el color del texto a un color oscuro */
         }
         .filter {
             margin-bottom: 20px;
@@ -45,6 +47,34 @@
         .footer {
             text-align: center;
             margin-top: 20px;
+        }
+        .details div {
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #fff; /* Fondo blanco para el contenido */
+            border: 1px solid #ddd; /* Borde para separar visualmente */
+            color: #000; /* Color del texto */
+        }
+        .details ul {
+            list-style-type: none;
+            padding-left: 0;
+            color: black;
+        }
+        .details ul li {
+            margin-bottom: 5px;
+        }
+        .details ul li strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .details-row {
+            display: none;
+        }
+        .details-row td {
+            padding: 5px;
+            font-size: 14px;
+            background-color: #f9f9f9;
+            color: black;
         }
     </style>
 </head>
@@ -86,6 +116,22 @@
 
     // Contar usuarios
     $totalUsuarios = $stmt->rowCount();
+
+    function loadUserTests($db, $userID) {
+        $sql = "SELECT tests.titulo, respuesta_usuario.nota, respuesta_usuario.fecha
+                FROM respuesta_usuario
+                INNER JOIN tests ON respuesta_usuario.ID_test = tests.ID_test
+                WHERE respuesta_usuario.ID_usuario = ?
+                ORDER BY tests.titulo, respuesta_usuario.fecha";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$userID]);
+
+        $result = "";
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $result .= "<tr class='details-row' id='details-{$userID}'><td colspan='6'><strong>" . htmlspecialchars($row['titulo']) . "</strong> - Fecha: " . htmlspecialchars($row['fecha']) . " - Nota: " . htmlspecialchars($row['nota']) . "</td></tr>";
+        }
+        return $result;
+    }
     ?>
 
     <?php include 'includes/comun/header.php'; ?>
@@ -117,23 +163,25 @@
                     <th>Email</th>
                     <th>Usuario</th>
                     <th>Grado</th>
+                    <th>Intentos</th>
                 </tr>
             </thead>
             <tbody>
                 <?php while ($row = $stmt->fetch(PDO::FETCH_ASSOC)): ?>
-                    <tr onclick="toggleDetails(this)">
+                    <tr>
                         <td><?= htmlspecialchars($row['nombre']) ?></td>
                         <td><?= htmlspecialchars($row['apellidos']) ?></td>
                         <td><?= htmlspecialchars($row['email']) ?></td>
                         <td><?= htmlspecialchars($row['user']) ?></td>
                         <td><?= htmlspecialchars($row['grado_nombre']) ?></td>
+                        <td><button onclick="toggleDetails(this, <?= $row['ID_usuario'] ?>)">Mostrar</button></td>
                     </tr>
-                    <tr class="details">
-                        <td colspan="5">
+                    <tr class="details" id="details-<?= $row['ID_usuario'] ?>">
+                        <td colspan="6">
                             <div>ID Usuario: <?= $row['ID_usuario'] ?></div>
-                            <?= loadUserTests($db, $row['ID_usuario']) ?>
                         </td>
                     </tr>
+                    <?= loadUserTests($db, $row['ID_usuario']) ?>
                 <?php endwhile; ?>
             </tbody>
         </table>
@@ -142,44 +190,23 @@
     <?php include 'includes/comun/footer.php'; ?>
 
     <script>
-        function toggleDetails(row) {
-            var details = row.nextElementSibling;
+        function toggleDetails(button, userID) {
+            var details = document.getElementById('details-' + userID);
+            var detailRows = document.querySelectorAll('#details-' + userID + ' + .details-row');
             if (details.style.display === 'none' || !details.style.display) {
                 details.style.display = 'table-row';
+                detailRows.forEach(function(row) {
+                    row.style.display = 'table-row';
+                });
+                button.innerText = 'Ocultar';
             } else {
                 details.style.display = 'none';
+                detailRows.forEach(function(row) {
+                    row.style.display = 'none';
+                });
+                button.innerText = 'Mostrar';
             }
         }
     </script>
 </body>
 </html>
-
-<?php
-function loadUserTests($db, $userID) {
-    $sql = "SELECT tests.titulo, respuesta_usuario.nota, respuesta_usuario.fecha
-            FROM respuesta_usuario
-            INNER JOIN tests ON respuesta_usuario.ID_test = tests.ID_test
-            WHERE respuesta_usuario.ID_usuario = ?
-            ORDER BY tests.titulo, respuesta_usuario.fecha";
-    $stmt = $db->prepare($sql);
-    $stmt->execute([$userID]);
-
-    $result = "<ul>";
-    $currentTest = "";
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        if ($row['titulo'] !== $currentTest) {
-            if ($currentTest !== "") {
-                $result .= "</ul></li>";
-            }
-            $currentTest = $row['titulo'];
-            $result .= "<li><strong>" . htmlspecialchars($currentTest) . "</strong><ul>";
-        }
-        $result .= "<li>Fecha: " . htmlspecialchars($row['fecha']) . " - Nota: " . htmlspecialchars($row['nota']) . "</li>";
-    }
-    if ($currentTest !== "") {
-        $result .= "</ul></li>";
-    }
-    $result .= "</ul>";
-    return $result;
-}
-?>
