@@ -63,9 +63,9 @@
     $gradoSeleccionado = isset($_GET['grado']) ? intval($_GET['grado']) : null;
 
     // Obtener lista de grados
-    $queryGrados = "SELECT ID_grado, nombre FROM grados WHERE ID_universidad = (SELECT ID_universidad FROM usuarios WHERE ID_usuario = ? LIMIT 1)";
+    $queryGrados = "SELECT ID_grado, nombre FROM grados WHERE ID_universidad = 1";
     $stmt = $db->prepare($queryGrados);
-    $stmt->execute([$_SESSION['user_id']]);
+    $stmt->execute();
     $grados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Construir la consulta SQL
@@ -83,6 +83,9 @@
     } else {
         $stmt->execute();
     }
+
+    // Contar usuarios
+    $totalUsuarios = $stmt->rowCount();
     ?>
 
     <?php include 'includes/comun/header.php'; ?>
@@ -103,6 +106,8 @@
                 <button type="submit">Filtrar</button>
             </form>
         </div>
+        
+        <p>Total de usuarios: <?= $totalUsuarios ?></p>
         
         <table>
             <thead>
@@ -151,15 +156,28 @@
 
 <?php
 function loadUserTests($db, $userID) {
-    $sql = "SELECT tests.titulo, respuesta_usuario.nota
+    $sql = "SELECT tests.titulo, respuesta_usuario.nota, respuesta_usuario.fecha
             FROM respuesta_usuario
             INNER JOIN tests ON respuesta_usuario.ID_test = tests.ID_test
-            WHERE respuesta_usuario.ID_usuario = ?";
+            WHERE respuesta_usuario.ID_usuario = ?
+            ORDER BY tests.titulo, respuesta_usuario.fecha";
     $stmt = $db->prepare($sql);
     $stmt->execute([$userID]);
+
     $result = "<ul>";
-    while ($test = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $result .= "<li>" . htmlspecialchars($test['titulo']) . " - Nota: " . $test['nota'] . "</li>";
+    $currentTest = "";
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        if ($row['titulo'] !== $currentTest) {
+            if ($currentTest !== "") {
+                $result .= "</ul></li>";
+            }
+            $currentTest = $row['titulo'];
+            $result .= "<li><strong>" . htmlspecialchars($currentTest) . "</strong><ul>";
+        }
+        $result .= "<li>Fecha: " . htmlspecialchars($row['fecha']) . " - Nota: " . htmlspecialchars($row['nota']) . "</li>";
+    }
+    if ($currentTest !== "") {
+        $result .= "</ul></li>";
     }
     $result .= "</ul>";
     return $result;
